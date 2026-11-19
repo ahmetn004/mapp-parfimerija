@@ -1,0 +1,16 @@
+# Zavisnosti
+node_modules/
+
+# Tajne i lokalna podešavanja (nikad na GitHub)
+.env
+.env.*
+!.env.example
+
+# Expo i build
+.expo/
+dist/
+web-build/
+
+# Logovi i sistemski fajlovi
+*.log
+.DS_Store
