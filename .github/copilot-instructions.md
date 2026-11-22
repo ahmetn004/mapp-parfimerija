@@ -1,0 +1,4 @@
+Baza je već napravljena po fajlovima mapp-backend/database/schema.sql i mapp-backend/database/seed.sql. Ne mijenjaj ih i ne generiši ponovo, nego ih pročitaj i prilagodi kod tim tabelama i kolonama.
+Funkcija create_order_from_cart baca greške koje počinju kodom: CART_EMPTY (400), ITEM_UNAVAILABLE (409), INSUFFICIENT_STOCK (409), INVALID_SHIPPING (400), INVALID_COUPON (400). Mapiraj ih na te HTTP statuse i vrati poruku iza dvotačke.
+Pri registraciji koristi supabaseAdmin.auth.admin.createUser sa user_metadata { full_name, phone }, jer trigger iz tog polja puni tabelu profiles.
+Tabele koje backend čita ili piše koristi preko supabaseAdmin (secret ključ).
