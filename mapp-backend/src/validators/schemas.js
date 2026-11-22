@@ -1,0 +1,143 @@
+const { z } = require('zod');
+
+const uuid = z.string().uuid();
+const empty = z.object({});
+const page = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(12),
+});
+const idParams = z.object({ id: uuid });
+const productParams = z.object({ idOrSlug: z.string().min(1) });
+const addressFields = {
+  recipient_name: z.string().min(1).max(120),
+  phone: z.string().max(40).optional().nullable(),
+  address_line1: z.string().min(1).max(200),
+  address_line2: z.string().max(200).optional().nullable(),
+  city: z.string().min(1).max(100),
+  region: z.string().max(100).optional().nullable(),
+  postal_code: z.string().max(30).optional().nullable(),
+  country: z.string().min(1).max(100).default('Bosna i Hercegovina'),
+  is_default: z.boolean().optional(),
+};
+const variant = z.object({
+  size_label: z.string().min(1),
+  size_ml: z.number().int().positive(),
+  sku: z.string().min(1),
+  price_cents: z.number().int().nonnegative(),
+  compare_at_price_cents: z.number().int().nonnegative().optional().nullable(),
+  stock_quantity: z.number().int().nonnegative().default(0),
+  low_stock_threshold: z.number().int().nonnegative().default(5),
+  is_full_bottle: z.boolean().default(false),
+  is_active: z.boolean().default(true),
+});
+
+module.exports = {
+  empty,
+  idParams,
+  productParams,
+  page,
+  register: z.object({ email: z.string().email(), password: z.string().min(8), full_name: z.string().min(1).max(120), phone: z.string().max(40).optional() }),
+  login: z.object({ email: z.string().email(), password: z.string().min(1) }),
+  refresh: z.object({ refresh_token: z.string().min(1) }),
+  forgot: z.object({ email: z.string().email() }),
+  profilePatch: z.object({
+    full_name: z.string().min(1).max(120).optional(),
+    phone: z.string().max(40).optional().nullable(),
+    avatar_url: z.string().url().optional().nullable(),
+  }).refine((value) => Object.keys(value).length > 0),
+  address: z.object(addressFields),
+  addressPatch: z.object(addressFields).partial().refine((value) => Object.keys(value).length > 0),
+  uuidParams: idParams,
+  addressDefaultParams: idParams,
+  slugParams: z.object({ slug: z.string().min(1) }),
+  productListQuery: page.extend({
+    search: z.string().optional(), brand: z.string().optional(), category: z.string().optional(),
+    gender: z.enum(['men', 'women', 'unisex']).optional(), fragrance_family: z.string().optional(),
+    min_price: z.coerce.number().int().nonnegative().optional(),
+    max_price: z.coerce.number().int().nonnegative().optional(),
+    sort: z.enum(['featured', 'newest', 'price_asc', 'price_desc', 'popular']).optional(),
+    featured: z.enum(['true', 'false']).optional(), new: z.enum(['true', 'false']).optional(),
+    bestseller: z.enum(['true', 'false']).optional(),
+  }).refine((value) => value.min_price === undefined || value.max_price === undefined || value.min_price <= value.max_price, {
+    message: 'min_price must not exceed max_price',
+    path: ['max_price'],
+  }),
+  reviewListQuery: page,
+  cartItem: z.object({ variant_id: uuid, quantity: z.number().int().positive() }),
+  quantity: z.object({ quantity: z.number().int().positive() }),
+  productCreate: z.object({
+    name: z.string().min(1), slug: z.string().min(1).optional(), brand_id: uuid,
+    description: z.string().optional().nullable(), fragrance_family: z.string().optional().nullable(),
+    gender: z.enum(['men', 'women', 'unisex']).default('unisex'),
+    top_notes: z.array(z.string()).default([]), heart_notes: z.array(z.string()).default([]),
+    base_notes: z.array(z.string()).default([]), concentration: z.string().optional().nullable(),
+    main_image_url: z.string().url().optional().nullable(), is_featured: z.boolean().default(false),
+    is_new_arrival: z.boolean().default(false), is_bestseller: z.boolean().default(false),
+    is_active: z.boolean().default(true), categories: z.array(uuid).default([]),
+    variants: z.array(variant).default([]),
+  }),
+  productPatch: z.object({
+    name: z.string().min(1).optional(), slug: z.string().min(1).optional(), brand_id: uuid.optional(),
+    description: z.string().optional().nullable(), fragrance_family: z.string().optional().nullable(),
+    gender: z.enum(['men', 'women', 'unisex']).optional(),
+    top_notes: z.array(z.string()).optional(), heart_notes: z.array(z.string()).optional(),
+    base_notes: z.array(z.string()).optional(), concentration: z.string().optional().nullable(),
+    main_image_url: z.string().url().optional().nullable(), is_featured: z.boolean().optional(),
+    is_new_arrival: z.boolean().optional(), is_bestseller: z.boolean().optional(),
+    categories: z.array(uuid).optional(),
+  }).refine((value) => Object.keys(value).length > 0),
+  status: z.object({ is_active: z.boolean() }),
+  variant,
+  variantPatch: variant.partial().refine((value) => Object.keys(value).length > 0),
+  stock: z.object({ stock_quantity: z.number().int().nonnegative() }),
+  brand: z.object({ name: z.string().min(1), slug: z.string().min(1).optional(), description: z.string().optional().nullable(), logo_url: z.string().url().optional().nullable(), country: z.string().optional().nullable(), is_active: z.boolean().optional() }),
+  brandPatch: z.object({ name: z.string().min(1).optional(), slug: z.string().min(1).optional(), description: z.string().optional().nullable(), logo_url: z.string().url().optional().nullable(), country: z.string().optional().nullable(), is_active: z.boolean().optional() }).refine((v) => Object.keys(v).length > 0),
+  category: z.object({ name: z.string().min(1), slug: z.string().min(1).optional(), description: z.string().optional().nullable(), image_url: z.string().url().optional().nullable(), is_active: z.boolean().optional() }),
+  categoryPatch: z.object({ name: z.string().min(1).optional(), slug: z.string().min(1).optional(), description: z.string().optional().nullable(), image_url: z.string().url().optional().nullable(), is_active: z.boolean().optional() }).refine((v) => Object.keys(v).length > 0),
+  coupon: z.object({
+    code: z.string().min(1), discount_type: z.enum(['percentage', 'fixed']), discount_value: z.number().int().positive(),
+    min_order_cents: z.number().int().nonnegative().default(0), starts_at: z.string().datetime().optional().nullable(),
+    expires_at: z.string().datetime().optional().nullable(), usage_limit: z.number().int().positive().optional().nullable(),
+    used_count: z.number().int().nonnegative().optional(), is_active: z.boolean().optional(),
+  }).refine((value) => value.discount_type !== 'percentage' || value.discount_value <= 100, {
+    message: 'Percentage discount cannot exceed 100',
+    path: ['discount_value'],
+  }),
+  couponPatch: z.object({
+    code: z.string().min(1).optional(), discount_type: z.enum(['percentage', 'fixed']).optional(),
+    discount_value: z.number().int().positive().optional(), min_order_cents: z.number().int().nonnegative().optional(),
+    starts_at: z.string().datetime().optional().nullable(), expires_at: z.string().datetime().optional().nullable(),
+    usage_limit: z.number().int().positive().optional().nullable(), is_active: z.boolean().optional(),
+  }).refine((v) => Object.keys(v).length > 0),
+  shippingMethod: z.object({ name: z.string().min(1), price_cents: z.number().int().nonnegative(), estimated_days: z.number().int().nonnegative().optional().nullable(), is_active: z.boolean().optional() }),
+  shippingPatch: z.object({ name: z.string().min(1).optional(), price_cents: z.number().int().nonnegative().optional(), estimated_days: z.number().int().nonnegative().optional().nullable(), is_active: z.boolean().optional() }).refine((v) => Object.keys(v).length > 0),
+  couponValidation: z.object({ code: z.string().min(1), subtotal_cents: z.number().int().nonnegative().optional() }),
+  orderCreate: z.object({
+    shipping_address: z.object({
+      recipient_name: z.string().min(1), phone: z.string().optional().nullable(),
+      address_line1: z.string().min(1), address_line2: z.string().optional().nullable(),
+      city: z.string().min(1), region: z.string().optional().nullable(),
+      postal_code: z.string().optional().nullable(), country: z.string().min(1),
+    }).optional(),
+    address_id: uuid.optional(), shipping_method_id: uuid,
+    coupon_code: z.string().optional(), notes: z.string().max(2000).optional(),
+    idempotency_key: z.string().min(1).max(200),
+  }).refine((value) => value.shipping_address || value.address_id),
+  orderList: page,
+  adminOrderQuery: page.extend({
+    status: z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']).optional(),
+    payment_status: z.enum(['unpaid', 'paid', 'refunded']).optional(), search: z.string().optional(),
+    from: z.string().datetime().optional(), to: z.string().datetime().optional(),
+  }),
+  orderStatus: z.object({ status: z.enum(['confirmed', 'processing', 'shipped', 'delivered', 'cancelled']) }),
+  paymentStatus: z.object({ payment_status: z.enum(['unpaid', 'paid', 'refunded']) }),
+  orderPatch: z.object({ shipping_address: z.record(z.string(), z.unknown()).optional(), customer_name: z.string().optional().nullable(), customer_phone: z.string().optional().nullable(), notes: z.string().max(2000).optional().nullable() }).refine((v) => Object.keys(v).length > 0),
+  reviewCreate: z.object({ rating: z.number().int().min(1).max(5), title: z.string().max(150).optional().nullable(), body: z.string().max(3000).optional().nullable() }),
+  reviewPatch: z.object({ rating: z.number().int().min(1).max(5).optional(), title: z.string().max(150).optional().nullable(), body: z.string().max(3000).optional().nullable() }).refine((v) => Object.keys(v).length > 0),
+  approvedQuery: z.object({ approved: z.enum(['true', 'false']).optional() }),
+  recommendations: z.object({
+    fragrance_family: z.string().optional(), gender: z.enum(['men', 'women', 'unisex']).optional(),
+    preferred_notes: z.array(z.string()).optional(), max_price_cents: z.number().int().nonnegative().optional(),
+    occasion: z.string().optional(), season: z.string().optional(), intensity: z.string().optional(),
+  }),
+};
