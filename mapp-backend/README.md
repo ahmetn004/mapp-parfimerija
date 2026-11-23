@@ -1,3 +1,7 @@
+Izgled aplikacije: https://www.figma.com/make/Kttq8Mzvsn03OiJZVOERed/Untitled?t=rz9T6SilpV7oTv0O-1
+
+
+
 # DEKANTCE API
 
 REST API for the DEKANTCE perfume-decant shop. The backend is Node.js, Express, and Supabase; Supabase PostgreSQL is the only database. Prices and order totals are integer cents, and checkout is cash on delivery.
